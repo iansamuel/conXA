@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draggable 4x4 Grid</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* The Grid Container */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+            gap: 10px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        /* Individual Squares */
+        .square {
+            width: 100px;
+            height: 100px;
+            background-color: #4facfe;
+            background-image: linear-gradient(to top, #4facfe 0%, #00f2fe 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            user-select: none; /* Prevents text highlighting while dragging */
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .square:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.15);
+        }
+
+        .square:active {
+            cursor: grabbing;
+        }
+
+        /* Style applied to the item being dragged */
+        .dragging {
+            opacity: 0.4;
+            border: 2px dashed #333;
+        }
+
+        /* Style applied to the drop target */
+        .over {
+            transform: scale(1.05);
+            border: 2px dashed #4facfe;
+        }
+
+        /* The Input field for editing */
+        .edit-input {
+            width: 80%;
+            padding: 5px;
+            border: none;
+            border-radius: 4px;
+            text-align: center;
+            font-family: inherit;
+            font-weight: bold;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Grid Word Arranger</h2>
+    <p class="instructions">Drag to rearrange • Double-click to edit text</p>
+
+    <div class="grid-container" id="grid">
+        </div>
+
+    <script>
+        const grid = document.getElementById('grid');
+        let dragSrcEl = null;
+
+        // 1. Initialize Grid
+        function createGrid() {
+            for (let i = 1; i <= 16; i++) {
+                const square = document.createElement('div');
+                square.classList.add('square');
+                square.setAttribute('draggable', 'true');
+                square.textContent = "Word " + i;
+                
+                // Add Event Listeners
+                addDnDHandlers(square);
+                addEditHandlers(square);
+                
+                grid.appendChild(square);
+            }
+        }
+
+        // 2. Drag and Drop Logic
+        function addDnDHandlers(elem) {
+            elem.addEventListener('dragstart', handleDragStart);
+            elem.addEventListener('dragenter', handleDragEnter);
+            elem.addEventListener('dragover', handleDragOver);
+            elem.addEventListener('dragleave', handleDragLeave);
+            elem.addEventListener('drop', handleDrop);
+            elem.addEventListener('dragend', handleDragEnd);
+        }
+
+        function handleDragStart(e) {
+            this.style.opacity = '0.4';
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault(); // Necessary to allow dropping
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            this.classList.add('over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+
+            // Don't do anything if dropping onto the same square
+            if (dragSrcEl !== this) {
+                // Swap the HTML content (this keeps the style but swaps text)
+                // Note: If we had complex internal elements, we would swap nodes instead.
+                // For text/inputs, swapping innerHTML is sufficient.
+                dragSrcEl.innerHTML = this.innerHTML;
+                this.innerHTML = e.dataTransfer.getData('text/html');
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            this.classList.remove('dragging');
+            
+            // Remove 'over' class from all squares
+            let items = document.querySelectorAll('.square');
+            items.forEach(function (item) {
+                item.classList.remove('over');
+            });
+        }
+
+        // 3. Edit Logic (Double Click)
+        function addEditHandlers(elem) {
+            elem.addEventListener('dblclick', function() {
+                // Disable dragging while editing so it doesn't get glitchy
+                elem.setAttribute('draggable', 'false');
+                
+                const currentText = this.textContent;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentText;
+                input.classList.add('edit-input');
+                
+                // Clear the square and add input
+                this.textContent = '';
+                this.appendChild(input);
+                input.focus();
+
+                // Save on Blur (clicking away) or Enter key
+                const save = () => {
+                    // Prevent saving empty strings if desired, or allow it
+                    const newText = input.value.trim() || "Empty";
+                    this.textContent = newText;
+                    elem.setAttribute('draggable', 'true'); // Re-enable drag
+                };
+
+                input.addEventListener('blur', save);
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        save();
+                    }
+                });
+            });
+        }
+
+        // Run initialization
+        createGrid();
+
+    </script>
+</body>
+</html>
