@@ -2,35 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Draggable 4x4 Grid</title>
     <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f0f2f5;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
+            height: 100vh;
             margin: 0;
-            padding: 10px;
+            padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         h2 {
             color: #333;
-            margin-bottom: 10px;
-            font-size: clamp(1.2rem, 5vw, 1.5rem);
+            margin: 5px 0;
+            font-size: clamp(1.1rem, 4vw, 1.5rem);
             text-align: center;
+            flex-shrink: 0;
         }
 
         .instructions {
-            margin-bottom: 20px;
+            margin: 5px 0 10px 0;
             color: #666;
-            font-size: clamp(0.75rem, 3vw, 0.9rem);
+            font-size: clamp(0.7rem, 2.5vw, 0.85rem);
             text-align: center;
             padding: 0 10px;
+            flex-shrink: 0;
         }
 
         /* The Grid Container */
@@ -38,15 +46,16 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(4, 1fr);
-            gap: 8px;
-            padding: 15px;
+            gap: clamp(4px, 1vw, 8px);
+            padding: clamp(8px, 2vw, 15px);
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: min(90vw, 450px);
-            height: min(90vw, 450px);
+            width: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
+            height: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
             max-width: 450px;
             max-height: 450px;
+            flex-shrink: 1;
         }
 
         /* Individual Squares */
@@ -101,6 +110,35 @@
             font-size: clamp(0.8rem, 3vw, 1rem);
             outline: none;
             -webkit-appearance: none; /* Remove iOS styling */
+        }
+
+        /* Mobile optimizations */
+        @media (max-height: 600px) {
+            h2 {
+                margin: 2px 0;
+                font-size: clamp(1rem, 4vw, 1.3rem);
+            }
+
+            .instructions {
+                margin: 2px 0 5px 0;
+                font-size: clamp(0.65rem, 2.5vw, 0.75rem);
+            }
+
+            .grid-container {
+                width: min(calc(100vw - 20px), calc(100vh - 80px), 450px);
+                height: min(calc(100vw - 20px), calc(100vh - 80px), 450px);
+            }
+        }
+
+        @media (max-width: 400px) {
+            body {
+                padding: 5px;
+            }
+
+            .grid-container {
+                gap: clamp(3px, 1vw, 6px);
+                padding: clamp(6px, 2vw, 12px);
+            }
         }
     </style>
 </head>
