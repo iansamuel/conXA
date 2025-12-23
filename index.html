@@ -19,7 +19,7 @@
             min-height: 100vh;
             height: 100vh;
             margin: 0;
-            padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+            padding: max(40px, calc(env(safe-area-inset-top) + 30px)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
             box-sizing: border-box;
             overflow: hidden;
         }
@@ -51,8 +51,8 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
-            height: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
+            width: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
+            height: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
             max-width: 450px;
             max-height: 450px;
             flex-shrink: 1;
@@ -162,14 +162,14 @@
             }
 
             .grid-container {
-                width: min(calc(100vw - 20px), calc(100vh - 80px), 450px);
-                height: min(calc(100vw - 20px), calc(100vh - 80px), 450px);
+                width: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
+                height: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
             }
         }
 
         @media (max-width: 400px) {
             body {
-                padding: 5px;
+                padding: max(30px, calc(env(safe-area-inset-top) + 20px)) 5px 5px 5px;
             }
 
             .grid-container {
