@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Draggable 4x4 Grid</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         * {
             -webkit-tap-highlight-color: transparent;
@@ -41,6 +42,41 @@
             flex-shrink: 0;
         }
 
+        .upload-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 2.5vw, 0.9rem);
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            user-select: none;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn:active {
+            transform: translateY(0);
+        }
+
+        .status-text {
+            font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+            color: #666;
+        }
+
         /* The Grid Container */
         .grid-container {
             display: grid;
@@ -51,8 +87,8 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            width: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
-            height: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
+            width: min(calc(100vw - 20px), calc(100vh - 210px), 450px);
+            height: min(calc(100vw - 20px), calc(100vh - 210px), 450px);
             max-width: 450px;
             max-height: 450px;
             flex-shrink: 1;
@@ -161,9 +197,13 @@
                 font-size: clamp(0.65rem, 2.5vw, 0.75rem);
             }
 
+            .upload-container {
+                margin-bottom: 5px;
+            }
+
             .grid-container {
-                width: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
-                height: min(calc(100vw - 20px), calc(100vh - 120px), 450px);
+                width: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
+                height: min(calc(100vw - 20px), calc(100vh - 160px), 450px);
             }
         }
 
@@ -183,6 +223,12 @@
 
     <h2>Grid Word Arranger</h2>
     <p class="instructions">Drag to rearrange • Double-click/tap to edit text</p>
+
+    <div class="upload-container">
+        <label for="imageUpload" class="upload-btn">📸 Upload Screenshot</label>
+        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+        <span id="status" class="status-text"></span>
+    </div>
 
     <div class="grid-container" id="grid">
         </div>
@@ -381,6 +427,59 @@
 
         // Run initialization
         createGrid();
+
+        // 4. OCR Functionality
+        const imageUpload = document.getElementById('imageUpload');
+        const statusText = document.getElementById('status');
+
+        imageUpload.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            statusText.textContent = 'Processing image...';
+
+            try {
+                const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            statusText.textContent = `Processing: ${Math.round(m.progress * 100)}%`;
+                        }
+                    }
+                });
+
+                // Extract words from OCR text
+                const words = text
+                    .split(/\s+/)
+                    .map(w => w.trim())
+                    .filter(w => w.length > 0 && /[a-zA-Z]/.test(w))
+                    .slice(0, 16);
+
+                // Populate grid
+                const squares = document.querySelectorAll('.square');
+                squares.forEach((square, index) => {
+                    if (index < words.length) {
+                        square.textContent = words[index];
+                    } else {
+                        square.textContent = '';
+                    }
+                });
+
+                statusText.textContent = `✓ Loaded ${words.length} words`;
+                setTimeout(() => {
+                    statusText.textContent = '';
+                }, 3000);
+
+            } catch (error) {
+                statusText.textContent = '✗ Error processing image';
+                console.error('OCR Error:', error);
+                setTimeout(() => {
+                    statusText.textContent = '';
+                }, 3000);
+            }
+
+            // Reset file input
+            e.target.value = '';
+        });
 
     </script>
 </body>
