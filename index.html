@@ -14,35 +14,43 @@
             justify-content: center;
             min-height: 100vh;
             margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
         }
 
         h2 {
             color: #333;
             margin-bottom: 10px;
+            font-size: clamp(1.2rem, 5vw, 1.5rem);
+            text-align: center;
         }
 
         .instructions {
             margin-bottom: 20px;
             color: #666;
-            font-size: 0.9rem;
+            font-size: clamp(0.75rem, 3vw, 0.9rem);
+            text-align: center;
+            padding: 0 10px;
         }
 
         /* The Grid Container */
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(4, 100px);
-            grid-template-rows: repeat(4, 100px);
-            gap: 10px;
-            padding: 20px;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 8px;
+            padding: 15px;
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: min(90vw, 450px);
+            height: min(90vw, 450px);
+            max-width: 450px;
+            max-height: 450px;
         }
 
         /* Individual Squares */
         .square {
-            width: 100px;
-            height: 100px;
             background-color: #4facfe;
             background-image: linear-gradient(to top, #4facfe 0%, #00f2fe 100%);
             border-radius: 8px;
@@ -52,10 +60,12 @@
             cursor: grab;
             color: white;
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: clamp(0.8rem, 3vw, 1.1rem);
             user-select: none; /* Prevents text highlighting while dragging */
             transition: transform 0.2s, box-shadow 0.2s;
             position: relative;
+            touch-action: none; /* Prevents default touch behaviors */
+            min-height: 44px; /* Minimum touch target size */
         }
 
         .square:hover {
@@ -82,20 +92,22 @@
         /* The Input field for editing */
         .edit-input {
             width: 80%;
-            padding: 5px;
+            padding: 8px;
             border: none;
             border-radius: 4px;
             text-align: center;
             font-family: inherit;
             font-weight: bold;
+            font-size: clamp(0.8rem, 3vw, 1rem);
             outline: none;
+            -webkit-appearance: none; /* Remove iOS styling */
         }
     </style>
 </head>
 <body>
 
     <h2>Grid Word Arranger</h2>
-    <p class="instructions">Drag to rearrange • Double-click to edit text</p>
+    <p class="instructions">Drag to rearrange • Double-click/tap to edit text</p>
 
     <div class="grid-container" id="grid">
         </div>
@@ -103,6 +115,8 @@
     <script>
         const grid = document.getElementById('grid');
         let dragSrcEl = null;
+        let touchDragEl = null;
+        let lastTap = 0;
 
         // 1. Initialize Grid
         function createGrid() {
@@ -111,11 +125,12 @@
                 square.classList.add('square');
                 square.setAttribute('draggable', 'true');
                 square.textContent = "Word " + i;
-                
+
                 // Add Event Listeners
                 addDnDHandlers(square);
+                addTouchHandlers(square);
                 addEditHandlers(square);
-                
+
                 grid.appendChild(square);
             }
         }
@@ -181,37 +196,112 @@
             });
         }
 
-        // 3. Edit Logic (Double Click)
+        // 2b. Touch Event Handlers for Mobile
+        function addTouchHandlers(elem) {
+            let touchStartTime = 0;
+            let touchStartPos = null;
+
+            elem.addEventListener('touchstart', function(e) {
+                touchStartTime = Date.now();
+                const touch = e.touches[0];
+                touchStartPos = { x: touch.clientX, y: touch.clientY };
+
+                // Check for double-tap to edit
+                const currentTime = Date.now();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    // Double tap detected
+                    e.preventDefault();
+                    enterEditMode(this);
+                    lastTap = 0;
+                    return;
+                }
+                lastTap = currentTime;
+
+                // Start drag after a short delay
+                setTimeout(() => {
+                    if (touchDragEl === this) {
+                        this.classList.add('dragging');
+                        this.style.opacity = '0.4';
+                    }
+                }, 150);
+
+                touchDragEl = this;
+            });
+
+            elem.addEventListener('touchmove', function(e) {
+                if (!touchDragEl) return;
+
+                e.preventDefault();
+                const touch = e.touches[0];
+                const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                // Remove 'over' class from all squares
+                document.querySelectorAll('.square').forEach(sq => sq.classList.remove('over'));
+
+                // Add 'over' class to the element below if it's a square
+                if (elemBelow && elemBelow.classList.contains('square') && elemBelow !== touchDragEl) {
+                    elemBelow.classList.add('over');
+                }
+            });
+
+            elem.addEventListener('touchend', function(e) {
+                if (!touchDragEl) return;
+
+                const touch = e.changedTouches[0];
+                const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                // Swap content if dropped on another square
+                if (elemBelow && elemBelow.classList.contains('square') && elemBelow !== touchDragEl) {
+                    const tempContent = touchDragEl.innerHTML;
+                    touchDragEl.innerHTML = elemBelow.innerHTML;
+                    elemBelow.innerHTML = tempContent;
+                }
+
+                // Clean up
+                this.style.opacity = '1';
+                this.classList.remove('dragging');
+                document.querySelectorAll('.square').forEach(sq => sq.classList.remove('over'));
+
+                touchDragEl = null;
+            });
+        }
+
+        // 3. Edit Logic (Double Click and Double Tap)
+        function enterEditMode(elem) {
+            // Disable dragging while editing so it doesn't get glitchy
+            elem.setAttribute('draggable', 'false');
+
+            const currentText = elem.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.classList.add('edit-input');
+
+            // Clear the square and add input
+            elem.textContent = '';
+            elem.appendChild(input);
+            input.focus();
+
+            // Save on Blur (clicking away) or Enter key
+            const save = () => {
+                // Prevent saving empty strings if desired, or allow it
+                const newText = input.value.trim() || "Empty";
+                elem.textContent = newText;
+                elem.setAttribute('draggable', 'true'); // Re-enable drag
+            };
+
+            input.addEventListener('blur', save);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    save();
+                }
+            });
+        }
+
         function addEditHandlers(elem) {
             elem.addEventListener('dblclick', function() {
-                // Disable dragging while editing so it doesn't get glitchy
-                elem.setAttribute('draggable', 'false');
-                
-                const currentText = this.textContent;
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentText;
-                input.classList.add('edit-input');
-                
-                // Clear the square and add input
-                this.textContent = '';
-                this.appendChild(input);
-                input.focus();
-
-                // Save on Blur (clicking away) or Enter key
-                const save = () => {
-                    // Prevent saving empty strings if desired, or allow it
-                    const newText = input.value.trim() || "Empty";
-                    this.textContent = newText;
-                    elem.setAttribute('draggable', 'true'); // Re-enable drag
-                };
-
-                input.addEventListener('blur', save);
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        save();
-                    }
-                });
+                enterEditMode(this);
             });
         }
 
