@@ -489,86 +489,107 @@
 
         // Extract 4x4 grid cells from word bounding boxes
         function extractGridCells(words) {
-            // Sort words by Y position (top to bottom), then X position (left to right)
-            const sortedWords = words.sort((a, b) => {
-                const yDiff = a.bbox.y0 - b.bbox.y0;
-                if (Math.abs(yDiff) > 20) return yDiff; // Different rows
-                return a.bbox.x0 - b.bbox.x0; // Same row, sort by x
+            // Calculate center point for each word
+            const wordCenters = words.map(w => ({
+                word: w,
+                x: (w.bbox.x0 + w.bbox.x1) / 2,
+                y: (w.bbox.y0 + w.bbox.y1) / 2
+            }));
+
+            // Find 4 row centers using clustering
+            const yCenters = wordCenters.map(w => w.y);
+            const rowClusters = clusterInto4(yCenters);
+
+            // Find 4 column centers using clustering
+            const xCenters = wordCenters.map(w => w.x);
+            const colClusters = clusterInto4(xCenters);
+
+            // Create a 4x4 grid of cells
+            const grid = Array(4).fill(null).map(() => Array(4).fill(null).map(() => []));
+
+            // Assign each word to the nearest grid cell
+            wordCenters.forEach(({ word, x, y }) => {
+                const rowIndex = findClosestCluster(y, rowClusters);
+                const colIndex = findClosestCluster(x, colClusters);
+                grid[rowIndex][colIndex].push(word.text.trim());
             });
 
-            // Group words into rows based on Y coordinate
-            const rows = [];
-            let currentRow = [];
-            let lastY = sortedWords[0].bbox.y0;
-
-            sortedWords.forEach(word => {
-                const yDiff = Math.abs(word.bbox.y0 - lastY);
-                if (yDiff > 30 && currentRow.length > 0) {
-                    // New row
-                    rows.push(currentRow);
-                    currentRow = [word];
-                    lastY = word.bbox.y0;
-                } else {
-                    currentRow.push(word);
-                    lastY = Math.min(lastY, word.bbox.y0);
-                }
-            });
-            if (currentRow.length > 0) rows.push(currentRow);
-
-            // If we don't have exactly 4 rows, try to adapt
-            const targetRows = Math.min(4, rows.length);
+            // Flatten grid to array of 16 cells, combining words in each cell
             const cells = [];
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 4; col++) {
+                    const cellWords = grid[row][col].filter(t => t.length > 0);
+                    cells.push(cellWords.join(' '));
+                }
+            }
 
-            // For each row, divide into columns
-            rows.slice(0, targetRows).forEach(rowWords => {
-                // Sort words in row by X position
-                rowWords.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+            return cells;
+        }
 
-                // Determine column boundaries
-                const targetCols = 4;
-                const cols = [];
+        // Simple clustering algorithm to find 4 centers
+        function clusterInto4(values) {
+            if (values.length === 0) return [0, 0, 0, 0];
 
-                if (rowWords.length <= targetCols) {
-                    // Each word is a cell
-                    rowWords.forEach(w => cols.push([w]));
-                } else {
-                    // Group words into columns based on X position
-                    const minX = Math.min(...rowWords.map(w => w.bbox.x0));
-                    const maxX = Math.max(...rowWords.map(w => w.bbox.x1));
-                    const colWidth = (maxX - minX) / targetCols;
+            const sorted = [...values].sort((a, b) => a - b);
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
 
-                    for (let i = 0; i < targetCols; i++) {
-                        const colLeft = minX + (i * colWidth);
-                        const colRight = minX + ((i + 1) * colWidth);
-                        const colWords = rowWords.filter(w => {
-                            const wordCenter = (w.bbox.x0 + w.bbox.x1) / 2;
-                            return wordCenter >= colLeft && wordCenter < colRight;
-                        });
-                        cols.push(colWords);
+            // Initialize 4 cluster centers evenly spaced
+            let centers = [
+                min + (max - min) * 0.125,
+                min + (max - min) * 0.375,
+                min + (max - min) * 0.625,
+                min + (max - min) * 0.875
+            ];
+
+            // Run k-means iterations
+            for (let iter = 0; iter < 10; iter++) {
+                const clusters = [[], [], [], []];
+
+                // Assign each value to nearest center
+                values.forEach(val => {
+                    let nearestIdx = 0;
+                    let nearestDist = Math.abs(val - centers[0]);
+                    for (let i = 1; i < 4; i++) {
+                        const dist = Math.abs(val - centers[i]);
+                        if (dist < nearestDist) {
+                            nearestDist = dist;
+                            nearestIdx = i;
+                        }
+                    }
+                    clusters[nearestIdx].push(val);
+                });
+
+                // Update centers to mean of assigned values
+                let changed = false;
+                for (let i = 0; i < 4; i++) {
+                    if (clusters[i].length > 0) {
+                        const newCenter = clusters[i].reduce((a, b) => a + b, 0) / clusters[i].length;
+                        if (Math.abs(newCenter - centers[i]) > 0.1) {
+                            changed = true;
+                        }
+                        centers[i] = newCenter;
                     }
                 }
 
-                // Combine words in each column into a cell
-                cols.slice(0, targetCols).forEach(colWords => {
-                    const cellText = colWords
-                        .map(w => w.text.trim())
-                        .filter(t => t.length > 0)
-                        .join(' ');
-                    cells.push(cellText);
-                });
-
-                // Pad row to 4 columns if needed
-                while (cells.length % 4 !== 0) {
-                    cells.push('');
-                }
-            });
-
-            // Pad to 16 cells if needed
-            while (cells.length < 16) {
-                cells.push('');
+                if (!changed) break;
             }
 
-            return cells.slice(0, 16);
+            return centers.sort((a, b) => a - b);
+        }
+
+        // Find which cluster a value is closest to
+        function findClosestCluster(value, centers) {
+            let nearestIdx = 0;
+            let nearestDist = Math.abs(value - centers[0]);
+            for (let i = 1; i < centers.length; i++) {
+                const dist = Math.abs(value - centers[i]);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestIdx = i;
+                }
+            }
+            return nearestIdx;
         }
 
     </script>
