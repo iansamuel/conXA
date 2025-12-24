@@ -439,7 +439,7 @@
             statusText.textContent = 'Processing image...';
 
             try {
-                const { data: { text } } = await Tesseract.recognize(file, 'eng', {
+                const { data } = await Tesseract.recognize(file, 'eng', {
                     logger: m => {
                         if (m.status === 'recognizing text') {
                             statusText.textContent = `Processing: ${Math.round(m.progress * 100)}%`;
@@ -447,24 +447,30 @@
                     }
                 });
 
-                // Extract words from OCR text
-                const words = text
-                    .split(/\s+/)
-                    .map(w => w.trim())
-                    .filter(w => w.length > 0 && /[a-zA-Z]/.test(w))
-                    .slice(0, 16);
+                // Get word-level data with bounding boxes
+                const words = data.words.filter(w => w.text.trim().length > 0);
+
+                if (words.length === 0) {
+                    statusText.textContent = '✗ No text detected';
+                    setTimeout(() => statusText.textContent = '', 3000);
+                    e.target.value = '';
+                    return;
+                }
+
+                // Group words into 4x4 grid based on spatial position
+                const cells = extractGridCells(words);
 
                 // Populate grid
                 const squares = document.querySelectorAll('.square');
                 squares.forEach((square, index) => {
-                    if (index < words.length) {
-                        square.textContent = words[index];
+                    if (index < cells.length) {
+                        square.textContent = cells[index];
                     } else {
                         square.textContent = '';
                     }
                 });
 
-                statusText.textContent = `✓ Loaded ${words.length} words`;
+                statusText.textContent = `✓ Loaded ${cells.length} cells`;
                 setTimeout(() => {
                     statusText.textContent = '';
                 }, 3000);
@@ -480,6 +486,90 @@
             // Reset file input
             e.target.value = '';
         });
+
+        // Extract 4x4 grid cells from word bounding boxes
+        function extractGridCells(words) {
+            // Sort words by Y position (top to bottom), then X position (left to right)
+            const sortedWords = words.sort((a, b) => {
+                const yDiff = a.bbox.y0 - b.bbox.y0;
+                if (Math.abs(yDiff) > 20) return yDiff; // Different rows
+                return a.bbox.x0 - b.bbox.x0; // Same row, sort by x
+            });
+
+            // Group words into rows based on Y coordinate
+            const rows = [];
+            let currentRow = [];
+            let lastY = sortedWords[0].bbox.y0;
+
+            sortedWords.forEach(word => {
+                const yDiff = Math.abs(word.bbox.y0 - lastY);
+                if (yDiff > 30 && currentRow.length > 0) {
+                    // New row
+                    rows.push(currentRow);
+                    currentRow = [word];
+                    lastY = word.bbox.y0;
+                } else {
+                    currentRow.push(word);
+                    lastY = Math.min(lastY, word.bbox.y0);
+                }
+            });
+            if (currentRow.length > 0) rows.push(currentRow);
+
+            // If we don't have exactly 4 rows, try to adapt
+            const targetRows = Math.min(4, rows.length);
+            const cells = [];
+
+            // For each row, divide into columns
+            rows.slice(0, targetRows).forEach(rowWords => {
+                // Sort words in row by X position
+                rowWords.sort((a, b) => a.bbox.x0 - b.bbox.x0);
+
+                // Determine column boundaries
+                const targetCols = 4;
+                const cols = [];
+
+                if (rowWords.length <= targetCols) {
+                    // Each word is a cell
+                    rowWords.forEach(w => cols.push([w]));
+                } else {
+                    // Group words into columns based on X position
+                    const minX = Math.min(...rowWords.map(w => w.bbox.x0));
+                    const maxX = Math.max(...rowWords.map(w => w.bbox.x1));
+                    const colWidth = (maxX - minX) / targetCols;
+
+                    for (let i = 0; i < targetCols; i++) {
+                        const colLeft = minX + (i * colWidth);
+                        const colRight = minX + ((i + 1) * colWidth);
+                        const colWords = rowWords.filter(w => {
+                            const wordCenter = (w.bbox.x0 + w.bbox.x1) / 2;
+                            return wordCenter >= colLeft && wordCenter < colRight;
+                        });
+                        cols.push(colWords);
+                    }
+                }
+
+                // Combine words in each column into a cell
+                cols.slice(0, targetCols).forEach(colWords => {
+                    const cellText = colWords
+                        .map(w => w.text.trim())
+                        .filter(t => t.length > 0)
+                        .join(' ');
+                    cells.push(cellText);
+                });
+
+                // Pad row to 4 columns if needed
+                while (cells.length % 4 !== 0) {
+                    cells.push('');
+                }
+            });
+
+            // Pad to 16 cells if needed
+            while (cells.length < 16) {
+                cells.push('');
+            }
+
+            return cells.slice(0, 16);
+        }
 
     </script>
 </body>
