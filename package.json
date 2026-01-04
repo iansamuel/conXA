@@ -1,0 +1,52 @@
+{
+  "name": "grid-word-arranger",
+  "version": "2.0.0",
+  "description": "A powerful, accessible web application for arranging words in a 4x4 grid with OCR support",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve -p 8000",
+    "lint": "eslint app.js ocr.js",
+    "lint:fix": "eslint app.js ocr.js --fix",
+    "format": "prettier --write \"*.{js,css,html,md,json}\"",
+    "format:check": "prettier --check \"*.{js,css,html,md,json}\""
+  },
+  "keywords": [
+    "grid",
+    "word-arranger",
+    "drag-drop",
+    "ocr",
+    "tesseract",
+    "puzzle",
+    "accessibility",
+    "dark-mode",
+    "keyboard-navigation"
+  ],
+  "author": "conXA",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/conXA.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/conXA/issues"
+  },
+  "homepage": "https://github.com/yourusername/conXA#readme",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1",
+    "serve": "^14.2.1"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "browserslist": [
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "iOS >= 14",
+    "Android >= 90"
+  ]
+}
