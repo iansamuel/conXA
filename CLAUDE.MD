@@ -8,7 +8,7 @@ A single-page web application that provides an interactive 4x4 grid for arrangin
 
 - **Frontend**: Pure HTML, CSS, and JavaScript (no frameworks)
 - **OCR Library**: Tesseract.js v5 (via CDN)
-- **Architecture**: Single-file application (`index.html`)
+- **Architecture**: Three-file application (HTML, CSS, JavaScript)
 
 ## Core Features
 
@@ -67,7 +67,10 @@ A single-page web application that provides an interactive 4x4 grid for arrangin
 ```
 conXA/
 ├── .git/               # Git repository
-└── index.html         # Main application (single file, ~600 lines)
+├── index.html          # HTML structure (26 lines)
+├── styles.css          # All styling (211 lines)
+├── script.js           # All JavaScript logic (357 lines)
+└── CLAUDE.MD           # Project documentation
 ```
 
 ## Recent Development History
@@ -80,16 +83,22 @@ conXA/
 ## Development Considerations
 
 ### When Making Changes:
-1. **Single File Architecture**: All code is in `index.html` - CSS in `<style>`, JS in `<script>`
+1. **Separated Files**: HTML structure in `index.html`, all styles in `styles.css`, all logic in `script.js`
 2. **No Build Process**: Direct browser execution, no compilation needed
 3. **Mobile-First**: Test both desktop and mobile interactions
 4. **OCR Testing**: Use real screenshot images of 4x4 grids to validate OCR accuracy
 
+### File Responsibilities:
+- **index.html**: Minimal HTML structure, imports CSS/JS, contains markup only
+- **styles.css**: All styling including grid layout, colors, responsive design, mobile optimizations
+- **script.js**: Grid creation, drag/drop handlers, touch handlers, edit mode, OCR functionality, k-means clustering
+
 ### Common Modification Areas:
-- **Grid Styling**: CSS lines 81-220 (colors, sizing, responsive behavior)
-- **OCR Algorithm**: JavaScript lines 490-593 (clustering, cell detection)
-- **Drag/Drop Logic**: JavaScript lines 259-389 (desktop and mobile handlers)
-- **Edit Mode**: JavaScript lines 391-426 (text editing functionality)
+- **Grid Styling**: `styles.css` - colors, sizing, responsive behavior, media queries
+- **OCR Algorithm**: `script.js` (extractGridCells, clusterInto4 functions) - clustering, cell detection
+- **Drag/Drop Logic**: `script.js` (addDnDHandlers, handleDrag* functions) - desktop handlers
+- **Touch Handlers**: `script.js` (addTouchHandlers function) - mobile drag/drop
+- **Edit Mode**: `script.js` (enterEditMode, addEditHandlers functions) - text editing
 
 ### Known Constraints:
 - Requires 16 cells (4x4 grid) - hardcoded layout
