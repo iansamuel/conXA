@@ -195,10 +195,15 @@ createGrid();
 // 4. OCR Functionality
 const imageUpload = document.getElementById('imageUpload');
 const statusText = document.getElementById('status');
+const pasteBtn = document.getElementById('pasteBtn');
 
-imageUpload.addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+// Shared function to process an image file
+async function processImageFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        statusText.textContent = '✗ Please provide a valid image';
+        setTimeout(() => statusText.textContent = '', 3000);
+        return;
+    }
 
     statusText.textContent = 'Processing image...';
 
@@ -217,7 +222,6 @@ imageUpload.addEventListener('change', async function(e) {
         if (words.length === 0) {
             statusText.textContent = '✗ No text detected';
             setTimeout(() => statusText.textContent = '', 3000);
-            e.target.value = '';
             return;
         }
 
@@ -246,10 +250,63 @@ imageUpload.addEventListener('change', async function(e) {
             statusText.textContent = '';
         }, 3000);
     }
+}
+
+// File upload handler
+imageUpload.addEventListener('change', async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    await processImageFile(file);
 
     // Reset file input
     e.target.value = '';
 });
+
+// Desktop: Paste event listener
+document.addEventListener('paste', async function(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+            e.preventDefault();
+            const file = items[i].getAsFile();
+            await processImageFile(file);
+            break;
+        }
+    }
+});
+
+// Mobile: Show paste button if Clipboard API is supported
+if (navigator.clipboard && navigator.clipboard.read) {
+    pasteBtn.style.display = 'inline-block';
+
+    pasteBtn.addEventListener('click', async function() {
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+
+            for (const item of clipboardItems) {
+                for (const type of item.types) {
+                    if (type.startsWith('image/')) {
+                        const blob = await item.getType(type);
+                        const file = new File([blob], 'clipboard-image.png', { type: blob.type });
+                        await processImageFile(file);
+                        return;
+                    }
+                }
+            }
+
+            statusText.textContent = '✗ No image in clipboard';
+            setTimeout(() => statusText.textContent = '', 3000);
+
+        } catch (error) {
+            console.error('Clipboard error:', error);
+            statusText.textContent = '✗ Could not access clipboard';
+            setTimeout(() => statusText.textContent = '', 3000);
+        }
+    });
+}
 
 // Extract 4x4 grid cells from word bounding boxes
 function extractGridCells(words) {

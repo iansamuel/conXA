@@ -10,11 +10,12 @@
 <body>
 
     <h2>Grid Word Arranger</h2>
-    <p class="instructions">Drag to rearrange • Double-click/tap to edit text</p>
+    <p class="instructions">Drag to rearrange • Double-click/tap to edit text • Paste image (Ctrl+V)</p>
 
     <div class="upload-container">
         <label for="imageUpload" class="upload-btn">📸 Upload Screenshot</label>
         <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+        <button id="pasteBtn" class="upload-btn" style="display: none;">📋 Paste from Clipboard</button>
         <span id="status" class="status-text"></span>
     </div>
 
