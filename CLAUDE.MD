@@ -24,6 +24,9 @@ A single-page web application that provides an interactive 4x4 grid for arrangin
 
 ### 2. OCR Functionality
 - **Screenshot Upload**: Users can upload images containing a 4x4 grid of text
+- **Clipboard Paste**:
+  - Desktop: Paste images directly with Ctrl+V/Cmd+V
+  - Mobile: "Paste from Clipboard" button (shown only if Clipboard API is supported)
 - **Text Extraction**: Tesseract.js extracts words with bounding box coordinates
 - **Smart Grid Detection**: K-means clustering algorithm (lines 530-593) automatically:
   - Identifies 4 row centers from word Y-coordinates
@@ -62,6 +65,12 @@ A single-page web application that provides an interactive 4x4 grid for arrangin
 - Saves on blur or Enter key press
 - Re-enables dragging after save
 
+### Clipboard Paste (lines 267-308)
+- **Desktop**: Document-level `paste` event listener captures Ctrl+V/Cmd+V
+- **Mobile**: Conditional button using Clipboard API (`navigator.clipboard.read()`)
+- **Image Detection**: Checks clipboard items for image MIME types
+- **Shared Processing**: Uses common `processImageFile()` function for both upload and paste
+
 ## File Structure
 
 ```
@@ -75,9 +84,10 @@ conXA/
 
 ## Recent Development History
 
-- **Latest**: Reverted major refactor (commit c940478)
-- **OCR Improvements**: K-means clustering for robust grid detection (commit 67afd6c)
-- **Multi-word Support**: Spatial analysis for cells with multiple words (commit 0ade4e5)
+- **Latest**: Added clipboard image paste support for desktop (Ctrl+V) and mobile (button with Clipboard API) (commit 2010f00)
+- **Refactoring**: Split single-file app into HTML, CSS, and JS files (commit 0758729)
+- **OCR Improvements**: K-means clustering for robust grid detection
+- **Multi-word Support**: Spatial analysis for cells with multiple words
 - **Mobile UX**: Dynamic Island spacing and color-coded rows
 
 ## Development Considerations
@@ -89,13 +99,14 @@ conXA/
 4. **OCR Testing**: Use real screenshot images of 4x4 grids to validate OCR accuracy
 
 ### File Responsibilities:
-- **index.html**: Minimal HTML structure, imports CSS/JS, contains markup only
+- **index.html**: Minimal HTML structure, imports CSS/JS, contains markup and paste button
 - **styles.css**: All styling including grid layout, colors, responsive design, mobile optimizations
-- **script.js**: Grid creation, drag/drop handlers, touch handlers, edit mode, OCR functionality, k-means clustering
+- **script.js**: Grid creation, drag/drop handlers, touch handlers, edit mode, OCR functionality, clipboard paste, k-means clustering
 
 ### Common Modification Areas:
 - **Grid Styling**: `styles.css` - colors, sizing, responsive behavior, media queries
 - **OCR Algorithm**: `script.js` (extractGridCells, clusterInto4 functions) - clustering, cell detection
+- **Clipboard Paste**: `script.js` (paste event listener, pasteBtn handler, processImageFile function) - image pasting
 - **Drag/Drop Logic**: `script.js` (addDnDHandlers, handleDrag* functions) - desktop handlers
 - **Touch Handlers**: `script.js` (addTouchHandlers function) - mobile drag/drop
 - **Edit Mode**: `script.js` (enterEditMode, addEditHandlers functions) - text editing
@@ -108,15 +119,17 @@ conXA/
 
 ## Testing Scenarios
 
-1. **Desktop**: Test drag-and-drop, double-click edit, screenshot upload
-2. **Mobile**: Test touch drag, double-tap edit, responsive layout
-3. **OCR**: Upload various 4x4 grid screenshots with different fonts/spacing
-4. **Edge Cases**: Empty cells, multi-word cells, rotated text, poor image quality
+1. **Desktop**: Test drag-and-drop, double-click edit, screenshot upload, Ctrl+V paste
+2. **Mobile**: Test touch drag, double-tap edit, responsive layout, clipboard paste button
+3. **OCR**: Upload/paste various 4x4 grid screenshots with different fonts/spacing
+4. **Clipboard**: Test paste on different browsers (Chrome, Firefox, Safari), test with no image in clipboard
+5. **Edge Cases**: Empty cells, multi-word cells, rotated text, poor image quality
 
 ## Browser Compatibility
 
 - Modern browsers with ES6+ support
 - HTML5 Drag and Drop API
 - Touch Events API
+- Clipboard API (for paste button on mobile)
 - CSS Grid and Flexbox
 - Safe area insets (iOS)
