@@ -97,12 +97,19 @@ h2 {
     cursor: grab;
     color: white;
     font-weight: bold;
-    font-size: clamp(0.8rem, 3vw, 1.1rem);
+    font-size: clamp(0.75rem, 2.8vw, 1rem);
     user-select: none; /* Prevents text highlighting while dragging */
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
     touch-action: none; /* Prevents default touch behaviors */
     min-height: 44px; /* Minimum touch target size */
+    padding: clamp(4px, 1vw, 8px);
+    text-align: center;
+    overflow-wrap: break-word; /* Allow long words to break */
+    word-wrap: break-word; /* Legacy support */
+    hyphens: auto; /* Add hyphens for broken words */
+    line-height: 1.2; /* Tighter line height for multi-line text */
+    box-sizing: border-box;
 }
 
 .square:hover {
@@ -172,7 +179,7 @@ h2 {
     text-align: center;
     font-family: inherit;
     font-weight: bold;
-    font-size: clamp(0.8rem, 3vw, 1rem);
+    font-size: clamp(0.75rem, 2.8vw, 1rem);
     outline: none;
     -webkit-appearance: none; /* Remove iOS styling */
 }

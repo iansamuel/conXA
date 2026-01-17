@@ -228,20 +228,41 @@ async function processImageFile(file) {
         // Group words into 4x4 grid based on spatial position
         const cells = extractGridCells(words);
 
+        // Validate that we got 16 cells
+        if (cells.length !== 16) {
+            statusText.textContent = `✗ Expected 16 cells, found ${cells.length}. Try a clearer screenshot.`;
+            setTimeout(() => statusText.textContent = '', 5000);
+            return;
+        }
+
+        // Check if we have too many empty cells (likely bad OCR)
+        const emptyCells = cells.filter(c => c.trim().length === 0).length;
+        if (emptyCells > 8) {
+            statusText.textContent = `✗ Too many empty cells (${emptyCells}/16). OCR may have failed.`;
+            setTimeout(() => statusText.textContent = '', 5000);
+            return;
+        }
+
         // Populate grid
         const squares = document.querySelectorAll('.square');
         squares.forEach((square, index) => {
-            if (index < cells.length) {
-                square.textContent = cells[index];
-            } else {
-                square.textContent = '';
-            }
+            square.textContent = cells[index];
         });
 
-        statusText.textContent = `✓ Loaded ${cells.length} cells`;
+        // Show helpful status message
+        const multiWordCells = cells.filter(c => c.trim().split(/\s+/).length > 1).length;
+        let statusMsg = `✓ Loaded 16 cells`;
+        if (multiWordCells > 0) {
+            statusMsg += ` (${multiWordCells} with multiple words)`;
+        }
+        if (emptyCells > 0) {
+            statusMsg += ` • ${emptyCells} empty`;
+        }
+
+        statusText.textContent = statusMsg;
         setTimeout(() => {
             statusText.textContent = '';
-        }, 3000);
+        }, 4000);
 
     } catch (error) {
         statusText.textContent = '✗ Error processing image';
