@@ -189,13 +189,19 @@ function addEditHandlers(elem) {
     });
 }
 
-// Run initialization
-createGrid();
+// Run initialization (skip if running in test environment)
+if (typeof process === 'undefined' || !process.env?.VITEST) {
+    createGrid();
+}
 
 // 4. OCR Functionality
-const imageUpload = document.getElementById('imageUpload');
-const statusText = document.getElementById('status');
-const pasteBtn = document.getElementById('pasteBtn');
+// Skip DOM initialization in test environment
+let imageUpload, statusText, pasteBtn;
+if (typeof process === 'undefined' || !process.env?.VITEST) {
+    imageUpload = document.getElementById('imageUpload');
+    statusText = document.getElementById('status');
+    pasteBtn = document.getElementById('pasteBtn');
+}
 
 // Shared function to process an image file
 async function processImageFile(file) {
@@ -228,20 +234,41 @@ async function processImageFile(file) {
         // Group words into 4x4 grid based on spatial position
         const cells = extractGridCells(words);
 
+        // Validate that we got 16 cells
+        if (cells.length !== 16) {
+            statusText.textContent = `✗ Expected 16 cells, found ${cells.length}. Try a clearer screenshot.`;
+            setTimeout(() => statusText.textContent = '', 5000);
+            return;
+        }
+
+        // Check if we have too many empty cells (likely bad OCR)
+        const emptyCells = cells.filter(c => c.trim().length === 0).length;
+        if (emptyCells > 8) {
+            statusText.textContent = `✗ Too many empty cells (${emptyCells}/16). OCR may have failed.`;
+            setTimeout(() => statusText.textContent = '', 5000);
+            return;
+        }
+
         // Populate grid
         const squares = document.querySelectorAll('.square');
         squares.forEach((square, index) => {
-            if (index < cells.length) {
-                square.textContent = cells[index];
-            } else {
-                square.textContent = '';
-            }
+            square.textContent = cells[index];
         });
 
-        statusText.textContent = `✓ Loaded ${cells.length} cells`;
+        // Show helpful status message
+        const multiWordCells = cells.filter(c => c.trim().split(/\s+/).length > 1).length;
+        let statusMsg = `✓ Loaded 16 cells`;
+        if (multiWordCells > 0) {
+            statusMsg += ` (${multiWordCells} with multiple words)`;
+        }
+        if (emptyCells > 0) {
+            statusMsg += ` • ${emptyCells} empty`;
+        }
+
+        statusText.textContent = statusMsg;
         setTimeout(() => {
             statusText.textContent = '';
-        }, 3000);
+        }, 4000);
 
     } catch (error) {
         statusText.textContent = '✗ Error processing image';
@@ -252,60 +279,63 @@ async function processImageFile(file) {
     }
 }
 
-// File upload handler
-imageUpload.addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+// Event listeners (skip in test environment)
+if (typeof process === 'undefined' || !process.env?.VITEST) {
+    // File upload handler
+    imageUpload.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    await processImageFile(file);
+        await processImageFile(file);
 
-    // Reset file input
-    e.target.value = '';
-});
+        // Reset file input
+        e.target.value = '';
+    });
 
-// Desktop: Paste event listener
-document.addEventListener('paste', async function(e) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+    // Desktop: Paste event listener
+    document.addEventListener('paste', async function(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return;
 
-    for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith('image/')) {
-            e.preventDefault();
-            const file = items[i].getAsFile();
-            await processImageFile(file);
-            break;
-        }
-    }
-});
-
-// Mobile: Show paste button if Clipboard API is supported
-if (navigator.clipboard && navigator.clipboard.read) {
-    pasteBtn.style.display = 'inline-block';
-
-    pasteBtn.addEventListener('click', async function() {
-        try {
-            const clipboardItems = await navigator.clipboard.read();
-
-            for (const item of clipboardItems) {
-                for (const type of item.types) {
-                    if (type.startsWith('image/')) {
-                        const blob = await item.getType(type);
-                        const file = new File([blob], 'clipboard-image.png', { type: blob.type });
-                        await processImageFile(file);
-                        return;
-                    }
-                }
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                await processImageFile(file);
+                break;
             }
-
-            statusText.textContent = '✗ No image in clipboard';
-            setTimeout(() => statusText.textContent = '', 3000);
-
-        } catch (error) {
-            console.error('Clipboard error:', error);
-            statusText.textContent = '✗ Could not access clipboard';
-            setTimeout(() => statusText.textContent = '', 3000);
         }
     });
+
+    // Mobile: Show paste button if Clipboard API is supported
+    if (navigator.clipboard && navigator.clipboard.read) {
+        pasteBtn.style.display = 'inline-block';
+
+        pasteBtn.addEventListener('click', async function() {
+            try {
+                const clipboardItems = await navigator.clipboard.read();
+
+                for (const item of clipboardItems) {
+                    for (const type of item.types) {
+                        if (type.startsWith('image/')) {
+                            const blob = await item.getType(type);
+                            const file = new File([blob], 'clipboard-image.png', { type: blob.type });
+                            await processImageFile(file);
+                            return;
+                        }
+                    }
+                }
+
+                statusText.textContent = '✗ No image in clipboard';
+                setTimeout(() => statusText.textContent = '', 3000);
+
+            } catch (error) {
+                console.error('Clipboard error:', error);
+                statusText.textContent = '✗ Could not access clipboard';
+                setTimeout(() => statusText.textContent = '', 3000);
+            }
+        });
+    }
 }
 
 // Extract 4x4 grid cells from word bounding boxes
@@ -411,4 +441,13 @@ function findClosestCluster(value, centers) {
         }
     }
     return nearestIdx;
+}
+
+// Export functions for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        clusterInto4,
+        findClosestCluster,
+        extractGridCells
+    };
 }
