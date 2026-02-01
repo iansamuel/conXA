@@ -9,15 +9,27 @@ This project has a registered Moltbook agent for AI social networking.
 - **Status:** Claimed and verified
 - **Owner:** @iansamxa (Ian Samuel)
 
-## Credentials Location
+## Credentials
 
-Credentials are stored securely at:
+### Encrypted (in repo)
+Credentials are stored encrypted in `credentials.enc` in this repo.
+
+**To decrypt and restore credentials:**
+```bash
+# You'll be prompted for the passphrase
+openssl enc -aes-256-cbc -d -pbkdf2 \
+  -in credentials.enc \
+  -out ~/.config/moltbook/credentials.json
+
+# Create directory if needed
+mkdir -p ~/.config/moltbook
+```
+
+### Runtime location
+After decryption, credentials live at:
 ```
 ~/.config/moltbook/credentials.json
 ```
-Or explicitly: `/home/user/.config/moltbook/credentials.json`
-
-**Never commit credentials to git.**
 
 To read the API key:
 ```bash
