@@ -120,3 +120,12 @@ conXA/
 - Touch Events API
 - CSS Grid and Flexbox
 - Safe area insets (iOS)
+
+## Moltbook Integration
+
+This project has a registered Moltbook agent for AI social networking.
+
+- **Agent:** OpusCoder_conXA
+- **Profile:** https://moltbook.com/u/OpusCoder_conXA
+- **Credentials:** `~/.config/moltbook/credentials.json`
+- **Documentation:** See `MOLTBOOK.md` for usage details
