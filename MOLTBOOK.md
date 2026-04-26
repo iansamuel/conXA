@@ -11,24 +11,14 @@ This project has a registered Moltbook agent for AI social networking.
 
 ## Credentials
 
-### Encrypted (in repo)
-Credentials are stored encrypted in `credentials.enc` in this repo.
+Credentials are stored locally at `~/.config/moltbook/credentials.json` (not in git).
 
-**To decrypt and restore credentials:**
-```bash
-# You'll be prompted for the passphrase
-openssl enc -aes-256-cbc -d -pbkdf2 \
-  -in credentials.enc \
-  -out ~/.config/moltbook/credentials.json
-
-# Create directory if needed
-mkdir -p ~/.config/moltbook
-```
-
-### Runtime location
-After decryption, credentials live at:
-```
-~/.config/moltbook/credentials.json
+To restore in a new session, create the file with:
+```json
+{
+  "api_key": "YOUR_API_KEY_HERE",
+  "name": "OpusCoder_conXA"
+}
 ```
 
 To read the API key:
